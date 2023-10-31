@@ -1,0 +1,92 @@
+@echo off
+setLocal EnableDelayedExpansion
+
+cd ..
+set WRK=%CD%
+
+set DIR=C:
+set PGM=%DIR%\hysplit
+cd %PGM%\working
+
+IF EXIST ASCDATA.CFG DEL ASCDATA.CFG
+echo -90.0   -180.0  lat/lon of lower left corner   >ASCDATA.CFG
+echo 1.0     1.0     lat/lon spacing in degrees    >>ASCDATA.CFG
+echo 180     360     lat/lon number of data points >>ASCDATA.CFG
+echo 2               default land use category     >>ASCDATA.CFG
+echo 0.2             default roughness length (m)  >>ASCDATA.CFG
+echo '%PGM%\bdyfiles\'  directory of files         >>ASCDATA.CFG
+
+SET SYR=07
+SET SMO=04
+SET SDA=16
+SET SHR=00
+
+SET LAT=31.15
+SET LON=-82.40
+SET LVL=100.0
+    
+SET RUN=96
+SET TOP=10000.0
+
+SET MET=C:\hysplit\Tutorial\smoke
+SET DAT=WRF200704.bin
+
+REM -------------------------------------------------------
+        
+echo %SYR% %SMO% %SDA% %SHR% >CONTROL
+echo 1                      >>CONTROL
+echo %LAT% %LON% %LVL%      >>CONTROL
+echo %RUN%                  >>CONTROL
+echo 0                      >>CONTROL
+echo %TOP%                  >>CONTROL
+echo 1                      >>CONTROL
+echo %MET%\                 >>CONTROL
+echo %DAT%                  >>CONTROL
+echo 1                      >>CONTROL
+echo PM25                   >>CONTROL
+echo 1.0                    >>CONTROL
+echo 72.0                   >>CONTROL
+echo 00 00 00 18 00         >>CONTROL
+echo 1                      >>CONTROL
+echo 0.0 0.0                >>CONTROL
+echo 0.10 0.10              >>CONTROL
+echo 20.0 20.0              >>CONTROL
+echo .\                     >>CONTROL
+echo smoke.bin              >>CONTROL
+echo 1                      >>CONTROL
+echo 100                    >>CONTROL
+echo 00 00 00 00 00         >>CONTROL
+echo 00 00 00 00 00         >>CONTROL
+echo 00 01 00               >>CONTROL
+echo 1                      >>CONTROL
+echo 0.0 0.0 0.0            >>CONTROL
+echo 0.0 0.0 0.0 0.0 0.0    >>CONTROL
+echo 0.0 0.0 0.0            >>CONTROL
+echo 0.0                    >>CONTROL
+echo 0.0                    >>CONTROL
+
+IF EXIST SETUP.CFG DEL SETUP.CFG
+echo ^&SETUP               >SETUP.CFG
+echo initd = 3,           >>SETUP.CFG
+echo khmax = 24,          >>SETUP.CFG
+echo numpar = 10000,      >>SETUP.CFG
+echo maxpar = 50000,      >>SETUP.CFG
+echo efile = '%MET%\EMITIMES.txt',  >>SETUP.CFG
+echo /                    >>SETUP.CFG
+
+IF EXIST smoke.bin DEL smoke.bin
+%PGM%\exec\hycs_std
+
+IF EXIST concplot.html DEL concplot.html
+ECHO 'TITLE^&','### %0 ### ^&' >LABELS.CFG
+%PGM%\exec\concplot +g1 -ismoke.bin -j%PGM%\graphics\arlmap -c4 -z80 -uug -n40:40 -v500+200+100+50+20+10
+concplot.html
+PAUSE
+
+echo Mayo 30.2556 -81.4533 >samplers.txt
+%PGM%\exec\con2stn -ismoke.bin -ocon2stn.txt -r1 -ssamplers.txt
+type con2stn.txt
+PAUSE
+
+%PGM%\exec\timeplot +g1 -icon2stn.txt -s%MET%\mayo_pm25.txt
+timeplot.html
